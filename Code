@@ -1,0 +1,180 @@
+//***学习二叉树的同时，也学习了前面没有实践的数据结构：队列***
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef char TElemType;
+
+typedef struct BiTNode {
+	TElemType data;
+	struct BiTNode *lchild, *rchild;
+}BiTNode, *BiTree;
+
+//层序遍历时，用到的队列数据结构定义
+typedef struct QNode {
+	BiTree data;
+	struct QNode *next;
+}QNode, *QueuePtr;
+typedef struct {
+	QueuePtr front;
+	QueuePtr rear;
+}LinkQueue;
+
+#define OVERFLOW -1
+
+//相关函数
+visit(TElemType c) {
+	//if (' '!=c) printf("%c", c);
+	printf("%c", c);
+}
+//***错误创建***，导致后面遍历也有错误
+//先序次序创建二叉树
+////void CreateBiTree(BiTree *T) {
+////	TElemType c;
+////	*T = (BiTree)malloc(sizeof(BiTNode));
+////	scanf("%c", &c);
+////	(*T)->data = c;
+////	if (' ' != c)
+////	{
+////		CreateBiTree(&(*T)->lchild);
+////		CreateBiTree(&(*T)->rchild);
+////	}
+////}
+
+//先序次序创建二叉树
+void CreateBiTree(BiTree *T) {
+	TElemType c;
+	scanf("%c", &c);
+	//if (' ' != c)
+	//{
+	//	*T = (BiTree)malloc(sizeof(BiTNode));
+	//	(*T)->data = c;
+	//	CreateBiTree(&(*T)->lchild);
+	//	CreateBiTree(&(*T)->rchild);
+	//}
+	if (' ' == c) (*T) = NULL;
+	else
+	{
+		if (!((*T) = (BiTree)malloc(sizeof(BiTNode)))) exit(OVERFLOW);
+		(*T)->data = c;
+		CreateBiTree(&(*T)->lchild);
+		CreateBiTree(&(*T)->rchild);
+	}
+}
+
+//***错误遍历***
+////先序遍历二叉树
+//void PreOrderTraverse(BiTree T) {
+//	//visit(T->data);
+//	if (' ' != T->data)
+//	{
+//		visit(T->data);
+//		PreOrderTraverse(T->lchild);
+//		PreOrderTraverse(T->rchild);
+//	}
+//}
+
+//先序遍历二叉树
+void PreOrderTraverse(BiTree T) {
+	if (NULL != T)
+	{
+		visit(T->data);
+		PreOrderTraverse(T->lchild);
+		PreOrderTraverse(T->rchild);
+	}
+}
+
+//中序遍历二叉树
+void InOrderTraverse(BiTree T) {
+	if (NULL != T)
+	{
+		InOrderTraverse(T->lchild);
+		visit(T->data);
+		InOrderTraverse(T->rchild);
+	}
+}
+
+//初始化队列
+void InitQueue(LinkQueue *Q) {
+	//构造一个空队列
+	Q->front = Q->rear = (QueuePtr)malloc(sizeof(QNode));
+	if (!Q->front) exit(OVERFLOW);
+	Q->front->next = NULL;
+}
+
+//插入队尾元素
+void EnQueue(LinkQueue *Q, BiTree t){
+	QueuePtr p;
+	printf("%c", t->data);
+	p = (QueuePtr)malloc(sizeof(QNode));
+	if (!p) exit(OVERFLOW);
+	p->data = t;
+	p->next = NULL;
+	Q->rear->next = p;
+	Q->rear = p;
+}
+
+//删除队头元素
+void DeQueue(LinkQueue *Q){
+	QueuePtr p;
+	p = (QueuePtr)malloc(sizeof(QNode));
+	if (!p) exit(OVERFLOW);
+	p = Q->front->next;
+	Q->front->next = Q->front->next->next;
+	//***前面学习的时候，free后面忘了置空，不置空的后果就是，后面多次应用p，或者是多次释放p，会导致程序崩溃。这和忘了free（p），导致内存泄漏是两个破坏性的概念***
+	//***很关键，当删除到最后一个元素时，由于此时rear指针指向当前元素，所以free(p)前，要将rear指针指向头节点（即表示队列为空）；刚开始调试分析时少了这个，导致调试了很久***
+	if (Q->rear == p) Q->rear = Q->front;
+	free(p);
+	p = NULL;
+}
+
+//销毁队列（这里只考虑置空后的销毁）
+void DestoryQueue(LinkQueue *Q){
+	if (Q->front == Q->rear)
+	{
+		free(Q->front);
+		Q->front = NULL;
+	}
+	else
+	{
+		printf("\n队列不为空，请先清空队列！");
+		exit(OVERFLOW);
+	}
+}
+
+//循环递归插入和删除
+void CycleEnDeQueue(LinkQueue *Q) {
+	//队列为空，说明元素都删除了，销毁队列
+	if (Q->front == Q->rear) DestoryQueue(Q);
+	//执行递归
+	else
+	{
+		if (Q->front->next->data->lchild) EnQueue(Q, Q->front->next->data->lchild);
+		if (Q->front->next->data->rchild) EnQueue(Q, Q->front->next->data->rchild);
+		DeQueue(Q);
+		CycleEnDeQueue(Q);
+	}
+}
+//层序遍历二叉树,这里面用到了之前没用到的数据结构，队列
+void LevelOrderTraverse(BiTree T) {
+
+	LinkQueue Q;
+	InitQueue(&Q);
+	EnQueue(&Q, T);
+	//循环插入和删除元素，即层序遍历
+	CycleEnDeQueue(&Q);
+}
+
+int main()
+{
+	BiTree T = NULL;
+	printf("请输入二叉树元素：\n");
+	CreateBiTree(&T);
+	printf("前序遍历结果为：\n");
+	PreOrderTraverse(T);
+	printf("\n中序遍历结果为：\n");
+	InOrderTraverse(T);
+	printf("\n层序遍历结果为：\n");
+	LevelOrderTraverse(T);
+	printf("\n\n");
+	getchar();
+}
